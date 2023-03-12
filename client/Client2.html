@@ -1,0 +1,180 @@
+<html>
+
+<head>
+  <title>DS_Assignment2_Client_2</title>
+
+</head>
+
+<body>
+  <!-- This is the front-end interface setting for adding Topic and text -->
+	<h3>Enter your Topic:</h3>
+	<textarea id="titleInput" placeholder="Enter Topic"></textarea>
+	<br>
+  <h3>Enter your Text:</h3>
+	<textarea id="textInput" placeholder="Enter Text"></textarea>
+	<br>
+  <!-- A function is set up for button clicks, and when the button is clicked, the function is triggered -->
+	<button onclick="submitText()">Submit</button>
+  <br>
+  <br>
+  <br>
+  <br>
+	<br>
+   <!-- This is the front-end interface setup for searching xml file keywords -->
+  <h3>Search data :</h3>
+  <input type="text" id="Searchtext" name="Searchtext"><br><br>
+  <button onclick="SearchInput()">Search</button>
+  <br>
+  <br>
+  <br>
+  <br>
+   <!-- This is the front-end interface setup for searching keywords in the wiki -->
+  <h3>Wiki Search :</h3>
+  <input type="text" id="WikiSearchtext" name="WikiSearchtext"><br><br>
+  <button onclick="WikiSearchInput()">Search</button>
+
+  <!-- This is where the search content is displayed, and different events will trigger different feedback -->
+	<div id="submittedText"></div>
+
+  <!-- The Java script language is used to handle front-end events. When different buttons are clicked, they trigger different events, which then communicate with the server -->
+	<script>
+    //This function deals with adding a new Topic and text
+		async function submitText(event) {
+      const now = new Date(); // Create a new Date object with the current date and time
+      const options = { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      const dateString = now.toLocaleString('en-US', options); // Convert to string format using toLocaleString()
+      console.log(`The current date and time is ${dateString}`);
+      //Used to get the value of the front-end input box
+			var title = document.getElementById("titleInput").value;
+			var text = document.getElementById("textInput").value;
+      //If an input box has an empty value, the user will be reminded via a pop-up that each of the input boxes must be entered
+      if (title === "" ||text === "" ) {
+        alert("Please enter something");
+        return;
+      }
+      //Send POST requests to the server http://localhost:3000/store/input/ to communicate
+      var newtext=await fetch('http://localhost:3000/store/input/',{
+
+        method:"post",
+        headers:{
+          "Content-Type": "application/json",
+        },
+      //Content of communication
+        body: JSON.stringify({
+            topic:title,
+            text:text,
+            time:dateString
+             })
+        })
+        //Accept content returned by the server
+        var replytext= await newtext.json();
+        console.log(replytext)
+        //Print the return value of the server and the added text
+			document.getElementById("submittedText").innerHTML =  "<h1>" + replytext + "</h1>" +"<h2>" + title + "</h2><p>" + text + "</p>";
+		}
+
+
+    //This function is used to search for keywords stored in the xml file
+    async function SearchInput(event) {
+      //Get the value of the input box
+			var searc = document.getElementById("Searchtext").value;
+      //If the input box is empty, the page will pop-up prompt, the input box must have content
+      if (searc === "") {
+        alert("Please enter a search query");
+        return;
+      }
+      //Try to establish a communication connection with the server's http://localhost:3000/find/
+      try {
+        var response=await fetch('http://localhost:3000/find/',{
+
+            method:"post",
+            headers:{
+              "Content-Type": "application/json",
+            },
+
+            body: JSON.stringify({
+                topic:searc,
+                })
+            })
+        //Processing of information and data coming back from the server
+        const json = await response.json();
+      
+     
+        const title = json["$"].name;
+        const comments = json.note;
+        const submittedText = document.getElementById("submittedText");
+        submittedText.innerHTML = "";
+
+        const list = document.createElement("ul");
+        //If the information returned by the server is an array, print all the information by looping
+        if (Array.isArray(comments)) {
+        const list = document.createElement("ul");
+
+        comments.map((comment) => {
+          const listItem = document.createElement("li");
+          const commentName = document.createElement("h4");
+          commentName.innerText = "Note:"+comment["$"].name;
+          const commentText = document.createElement("p");
+          commentText.innerText = "Text:"+comment.text.trim();
+          const commentTimestamp = document.createElement("p");
+          commentTimestamp.innerText = "Time:"+comment.timestamp.trim();
+
+          listItem.appendChild(commentName);
+          listItem.appendChild(commentText);
+          listItem.appendChild(commentTimestamp);
+          list.appendChild(listItem);
+        });
+
+        submittedText.appendChild(list);
+      } else {
+        //If the information returned by the server is not an array, the content is judged and the corresponding result is printed
+        console.log(comments["$"].name,12)
+        if(comments["$"].name == "It is a great pity"){
+          document.getElementById("submittedText").innerHTML =  "<h1>" + comments["$"].name + "</h1>" +"<h2>" + comments.text.trim() + "</h2><p>" + "Please try again" + "</p>";
+        }else{document.getElementById("submittedText").innerHTML =  "<h1>Note:   " + comments["$"].name + "</h1>" +"<h2>Text:    " + comments.text.trim() + "</h2><p>Time:    " + comments.timestamp.trim() + "</p>";}
+        
+      }
+      } catch (error) {
+        console.error(error);
+        alert("An error occurred while fetching the data");
+      }
+
+          
+    }
+
+  //This function is used to search for keywords on Wikipedia
+  async function WikiSearchInput(event) {
+    const now = new Date(); // Create a new Date object with the current date and time
+      const options = { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      const dateString = now.toLocaleString('en-US', options); // Convert to string format using toLocaleString()
+    //Get the value of the WikiSearchtext input box
+    var wikise = document.getElementById("WikiSearchtext").value;
+
+    if (wikise === "") {
+      alert("Please enter a search query");
+      return;
+    }
+    //Send a request to server http://localhost:3000/find/wiki/ to get the wiki's search results
+    var newtext=await fetch('http://localhost:3000/find/wiki/',{
+
+      method:"post",
+      headers:{
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+          topic:wikise,
+          time:dateString
+          })
+      })
+      //Get the information returned by the server and print the information on the web page
+      var replytext= await newtext.json();
+      console.log(replytext)
+      document.getElementById("submittedText").innerHTML =  "<h1>" + replytext + "</h1>";
+
+      
+      }
+	</script>
+</body>
+
+</html>
